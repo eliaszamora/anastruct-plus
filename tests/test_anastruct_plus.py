@@ -15,8 +15,12 @@ class Vertex:
 
 
 class Node:
-    def __init__(self, x, y):
+    def __init__(self, x, y, node_id=0, Fx=0.0, Fy=0.0, Tz=0.0):
+        self.id = node_id
         self.vertex = Vertex(x, y)
+        self.Fx = Fx
+        self.Fy = Fy
+        self.Tz = Tz
 
 
 class Element:
@@ -33,8 +37,12 @@ class Element:
 class FakeSystemElements:
     def __init__(self, *args, figsize=(12, 8), **kwargs):
         self.figsize = figsize
-        self.node_map = {1: Node(0, 0), 2: Node(4, 0)}
+        self.node_map = {1: Node(0, 0, 1), 2: Node(4, 0, 2)}
         self.element_map = {1: Element(1)}
+        self.reaction_forces = {
+            1: Node(0, 0, 1, Fx=0.0, Fy=-25.0, Tz=20.0),
+            2: Node(4, 0, 2, Fx=0.0, Fy=-15.0, Tz=0.0),
+        }
 
     def get_element_results(self, element_id=None, verbose=False):
         data = {
@@ -56,11 +64,17 @@ class FakeSystemElements:
         y = values / max(1.0, np.max(np.abs(values))) * 0.6
         return np.r_[0.0, x, 4.0], np.r_[0.0, y, 0.0]
 
+    @staticmethod
+    def _wide_axes(ax):
+        ax.set_xlim(-2, 6)
+        ax.set_ylim(-1, 1)
+
     def _figure(self, key, figsize):
         fig, ax = plt.subplots(figsize=figsize)
         x, y = self._coords(key)
         ax.plot(x, y)
         ax.plot([0, 4], [0, 0])
+        self._wide_axes(ax)
         return fig
 
     def show_structure(
@@ -78,7 +92,10 @@ class FakeSystemElements:
             return np.array([0.0, 4.0]), np.array([0.0, 0.0])
         fig, ax = plt.subplots(figsize=figsize)
         ax.plot([0, 4], [0, 0])
-        ax.text(0, 0.2, "q=10.0")
+        if verbosity == 0:
+            ax.text(0, 0.2, "q=10.0")
+            ax.text(4, 0.2, "q=10.0")
+        self._wide_axes(ax)
         if show:
             plt.show()
             return None
@@ -138,6 +155,54 @@ class FakeSystemElements:
             return None
         return fig
 
+    def show_reaction_force(
+        self,
+        verbosity=0,
+        scale=1,
+        offset=(0, 0),
+        figsize=None,
+        show=True,
+    ):
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.plot([0, 4], [0, 0])
+        ax.annotate("", xy=(0, 0), xytext=(0, -0.6), arrowprops={"arrowstyle": "->"})
+        ax.annotate("", xy=(4, 0), xytext=(4, -0.4), arrowprops={"arrowstyle": "->"})
+        if verbosity == 0:
+            ax.text(0, -0.8, "R=-25.0")
+            ax.text(0.15, 0.15, "T=20.0")
+            ax.text(4, -0.6, "R=-15.0")
+        self._wide_axes(ax)
+        if show:
+            plt.show()
+            return None
+        return fig
+
+    def show_displacement(
+        self,
+        factor=None,
+        verbosity=0,
+        scale=1,
+        offset=(0, 0),
+        figsize=None,
+        show=True,
+        linear=False,
+        values_only=False,
+    ):
+        x = np.linspace(0, 4, 5)
+        y = np.array([0.0, -0.25, -0.55, -0.35, 0.0])
+        if values_only:
+            return x, y
+        fig, ax = plt.subplots(figsize=figsize)
+        ax.plot([0, 4], [0, 0])
+        ax.plot(x, y)
+        if verbosity == 0:
+            ax.text(2.15, -0.62, "0.003")
+        self._wide_axes(ax)
+        if show:
+            plt.show()
+            return None
+        return fig
+
 
 fake_anastruct = types.ModuleType("anastruct")
 fake_anastruct.SystemElements = FakeSystemElements
@@ -157,13 +222,15 @@ def test_auto_figsize_is_compact_for_horizontal_beam():
     assert height <= 3.5
 
 
-def test_structure_adds_length_axes_and_distributed_load_unit():
+def test_structure_adds_units_collapses_uniform_q_and_tightens_axes():
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
     fig = ss.show_structure(show=False)
     ax = fig.axes[0]
     assert ax.get_xlabel() == "x [m]"
     assert ax.get_ylabel() == "y [m]"
-    assert "q=10.0 tonf/m" in texts(fig)
+    assert texts(fig).count("q=10.0 tonf/m") == 1
+    assert ax.get_xlim()[0] > -1.0
+    assert ax.get_xlim()[1] < 5.0
 
 
 def test_bending_moment_labels_endpoints_and_global_extrema_including_zero_end():
@@ -200,6 +267,48 @@ def test_axial_force_uses_force_unit_and_avoids_repeated_constant_labels():
     labels = texts(fig)
     assert labels.count("4.00") == 2
     assert fig.axes[0].get_title() == "Diagrama de fuerza axial [tonf]"
+
+
+def test_force_diagrams_use_tight_geometry_bounds():
+    ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
+    for method in (ss.show_shear_force, ss.show_bending_moment, ss.show_axial_force):
+        fig = method(show=False)
+        xmin, xmax = fig.axes[0].get_xlim()
+        assert xmin > -1.0
+        assert xmax < 5.0
+
+
+def test_reaction_force_has_units_clear_labels_and_auto_framing():
+    ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
+    fig = ss.show_reaction_force(show=False)
+    labels = texts(fig)
+    assert fig.axes[0].get_title() == "Diagrama de reacciones"
+    assert "R1y = -25.00 tonf" in labels
+    assert "M1 = 20.00 tonf·m" in labels
+    assert "R2y = -15.00 tonf" in labels
+    assert not any(label.startswith("R=") or label.startswith("T=") for label in labels)
+    xmin, xmax = fig.axes[0].get_xlim()
+    assert xmin > -1.0
+    assert xmax < 5.0
+
+
+def test_displacement_has_unit_identified_value_and_auto_framing():
+    ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
+    fig = ss.show_displacement(show=False)
+    labels = texts(fig)
+    assert fig.axes[0].get_title() == "Diagrama de desplazamientos [m]"
+    assert "u = 0.003 m" in labels
+    assert "0.003" not in labels
+    xmin, xmax = fig.axes[0].get_xlim()
+    assert xmin > -1.0
+    assert xmax < 5.0
+
+
+def test_displacement_values_only_preserves_native_api():
+    ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
+    x, y = ss.show_displacement(values_only=True)
+    assert len(x) == 5
+    assert len(y) == 5
 
 
 def test_values_only_preserves_native_api():
