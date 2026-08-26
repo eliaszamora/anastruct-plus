@@ -120,6 +120,8 @@ class SystemElementsPlus(SystemElements):
                 y_pad = max(height * 0.30, 1e-9)
                 ax.set_ylim(y0 - y_pad, y0 + height + y_pad)
             elif width > 1e-12:
+                # Horizontal structures still need a small vertical window for
+                # supports, load arrows and labels.
                 half_height = max(width * 0.10, 0.25)
                 ax.set_ylim(y0 - half_height, y0 + half_height)
 
@@ -137,6 +139,8 @@ class SystemElementsPlus(SystemElements):
 
         for items in groups.values():
             items.sort(key=lambda text: (text.get_position()[0], text.get_position()[1]))
+            # Native anaStruct places q_start and q_end labels. Equal consecutive
+            # values indicate a uniform load; collapse each pair to its midpoint.
             for i in range(0, len(items) - 1, 2):
                 first, second = items[i], items[i + 1]
                 x1, y1 = first.get_position()
@@ -226,6 +230,7 @@ class SystemElementsPlus(SystemElements):
             y = node.vertex.y
             Fx = float(getattr(node, "Fx", 0.0) or 0.0)
             Fy = float(getattr(node, "Fy", 0.0) or 0.0)
+            Fy_display = Fy / float(getattr(self, "orientation_cs", 1) or 1)
             moment = float(getattr(node, "Tz", getattr(node, "Ty", 0.0)) or 0.0)
 
             if not np.isclose(Fx, 0.0, rtol=1e-5, atol=1e-9):
@@ -241,11 +246,11 @@ class SystemElementsPlus(SystemElements):
                     fontsize=9,
                 )
 
-            if not np.isclose(Fy, 0.0, rtol=1e-5, atol=1e-9):
-                dy = 12 if Fy >= 0 else -15
-                va = "bottom" if Fy >= 0 else "top"
+            if not np.isclose(Fy_display, 0.0, rtol=1e-5, atol=1e-9):
+                dy = 12 if Fy_display >= 0 else -15
+                va = "bottom" if Fy_display >= 0 else "top"
                 ax.annotate(
-                    f"R{node_id}y = {self._format_value(Fy, decimals)}{force_suffix}",
+                    f"R{node_id}y = {self._format_value(Fy_display, decimals)}{force_suffix}",
                     xy=(x, y),
                     xytext=(4, dy),
                     textcoords="offset points",
@@ -277,7 +282,7 @@ class SystemElementsPlus(SystemElements):
                 float(raw)
             except (TypeError, ValueError):
                 continue
-            text.set_text(f"u = {raw}{suffix}")
+            text.set_text(f"u_max = {raw}{suffix}")
 
     def show_structure(
         self,
@@ -508,10 +513,7 @@ class SystemElementsPlus(SystemElements):
             values_only=False,
         )
 
-        title = "Diagrama de desplazamientos"
-        if self.displacement_unit:
-            title += f" [{self.displacement_unit}]"
-        fig.axes[0].set_title(title)
+        fig.axes[0].set_title("Forma deformada (escala amplificada)")
         if verbosity == 0:
             self._label_displacement_values(fig)
         self._tighten_axes(fig, tighten_y=True)
