@@ -174,6 +174,49 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
             return f"{value:.{decimals}f}"
         return f"{value:.6g}"
 
+    @staticmethod
+    def _apply_standard_result_layout(fig) -> None:
+        """Use one common axes box for all result figures."""
+        fig.subplots_adjust(left=0.12, right=0.97, bottom=0.18, top=0.86)
+
+    def _reserve_transverse_gutter(self, fig) -> None:
+        """Reserve the visual Y-axis gutter without displaying a fake Y scale.
+
+        Jupyter/Colab commonly renders Matplotlib figures with a tight bounding
+        box. A reaction diagram has no physical transverse numeric axis, so its
+        empty left margin would otherwise be cropped away and the plot frame
+        would shift left relative to V/M/u_y diagrams. Transparent, visible
+        artists participate in tight-bbox calculation while remaining invisible
+        to the user, preserving alignment without claiming a fictitious scale.
+        """
+        if not fig.axes or self._model_axis_mode() != "horizontal":
+            return
+
+        ax = fig.axes[0]
+        ylabel_spacer = ax.text(
+            -0.08,
+            0.50,
+            "V [0000]",
+            transform=ax.transAxes,
+            rotation=90,
+            ha="center",
+            va="center",
+            alpha=0.0,
+            clip_on=False,
+        )
+        tick_spacer = ax.text(
+            -0.045,
+            0.05,
+            "-00.00",
+            transform=ax.transAxes,
+            ha="right",
+            va="center",
+            alpha=0.0,
+            clip_on=False,
+        )
+        ylabel_spacer._anastruct_plus_kind = "layout_spacer"
+        tick_spacer._anastruct_plus_kind = "layout_spacer"
+
     def _apply_physical_axis(
         self,
         fig,
@@ -210,7 +253,7 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
         span = max(ymax - ymin, abs(factor) * max(float(np.ptp(ticks)), 1e-9), 1e-9)
         pad = 0.25 * span
         ax.set_ylim(ymin - pad, ymax + pad)
-        fig.subplots_adjust(left=0.12, right=0.97, bottom=0.18, top=0.86)
+        self._apply_standard_result_layout(fig)
         ax._anastruct_plus_physical_y = {
             "baseline": baseline,
             "factor": factor,
@@ -403,6 +446,28 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
         if self._model_axis_mode() == "horizontal":
             _, plot_y = super().show_axial_force(factor=factor, values_only=True)
             self._physicalize_internal_force_axis(fig, "N", plot_y)
+        return self._return_plot(fig, show)
+
+    def show_reaction_force(
+        self,
+        verbosity: int = 0,
+        scale: float = 1,
+        offset: Tuple[float, float] = (0, 0),
+        figsize: FigSize = None,
+        show: bool = True,
+        decimals: int = 2,
+    ):
+        fig = super().show_reaction_force(
+            verbosity=verbosity,
+            scale=scale,
+            offset=offset,
+            figsize=figsize,
+            show=False,
+            decimals=decimals,
+        )
+        if self._model_axis_mode() == "horizontal":
+            self._apply_standard_result_layout(fig)
+            self._reserve_transverse_gutter(fig)
         return self._return_plot(fig, show)
 
     def show_displacement(
