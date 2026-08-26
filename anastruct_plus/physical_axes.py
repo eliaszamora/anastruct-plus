@@ -205,7 +205,7 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
             clip_on=False,
         )
         tick_spacer = ax.text(
-            -0.045,
+            -0.035,
             0.05,
             "-00.00",
             transform=ax.transAxes,
