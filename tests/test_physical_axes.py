@@ -116,12 +116,10 @@ def test_reaction_plot_reserves_same_left_gutter_as_physical_result_plots():
         ax_r = reaction.axes[0]
         ax_s = shear.axes[0]
 
-        # The actual axes boxes should use the same normalized layout.
-        assert np.allclose(ax_r.get_position().bounds, ax_s.get_position().bounds, atol=1e-12)
+        pos_r = ax_r.get_position().bounds
+        pos_s = ax_s.get_position().bounds
+        assert np.allclose(pos_r, pos_s, atol=1e-12), (pos_r, pos_s)
 
-        # Colab/Jupyter renders Matplotlib figures with a tight bounding box.
-        # Reserve an equivalent left gutter even though reactions intentionally
-        # have no numeric Y scale, so the second graph aligns with V/M/u_y.
         FigureCanvasAgg(reaction)
         FigureCanvasAgg(shear)
         reaction.canvas.draw()
@@ -132,6 +130,6 @@ def test_reaction_plot_reserves_same_left_gutter_as_physical_result_plots():
         tight_s = shear.get_tightbbox(rs).transformed(shear.dpi_scale_trans)
         gutter_r = ax_r.get_window_extent(rr).x0 - tight_r.x0
         gutter_s = ax_s.get_window_extent(rs).x0 - tight_s.x0
-        assert abs(gutter_r - gutter_s) <= 8.0
+        assert abs(gutter_r - gutter_s) <= 8.0, (gutter_r, gutter_s)
         '''
     )
