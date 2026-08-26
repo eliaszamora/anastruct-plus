@@ -1,8 +1,7 @@
-"""Small plotting extension for anaStruct.
+"""Lightweight plotting extensions for anaStruct.
 
-The structural analysis remains entirely in anaStruct. This module only improves
-plot presentation: compact automatic figure sizes, unit labels, and relevant
-values (element ends + global max/min for each element).
+anaStruct remains responsible for the structural analysis. This module only adds
+compact plotting, visual units, clearer annotations, and tighter framing.
 """
 
 from __future__ import annotations
@@ -20,7 +19,7 @@ FigSize = Optional[Union[Tuple[float, float], str]]
 class SystemElementsPlus(SystemElements):
     """anaStruct ``SystemElements`` with improved result plots.
 
-    All original anaStruct modelling and analysis methods are inherited unchanged.
+    All modelling and analysis methods are inherited unchanged from anaStruct.
 
     Parameters added by this extension:
         force_unit: Display unit for forces, e.g. ``"tonf"`` or ``"kN"``.
@@ -52,6 +51,10 @@ class SystemElementsPlus(SystemElements):
         if self.force_unit and self.length_unit:
             return f"{self.force_unit}·{self.length_unit}"
         return ""
+
+    @property
+    def displacement_unit(self) -> str:
+        return self.length_unit
 
     def _auto_figsize(self) -> Tuple[float, float]:
         """Choose a compact figure size from the model aspect ratio."""
@@ -95,6 +98,57 @@ class SystemElementsPlus(SystemElements):
         if abs(value) < 0.5 * 10 ** (-decimals):
             value = 0.0
         return f"{value:.{decimals}f}"
+
+    @staticmethod
+    def _tighten_axes(fig, tighten_y: bool = True, pad_ratio: float = 0.08) -> None:
+        """Tighten anaStruct's generous limits around the actual plotted data."""
+        if not fig.axes:
+            return
+
+        ax = fig.axes[0]
+        bounds = np.asarray(ax.dataLim.bounds, dtype=float)
+        if not np.all(np.isfinite(bounds)):
+            return
+
+        x0, y0, width, height = bounds
+        if width > 1e-12:
+            x_pad = max(width * pad_ratio, 1e-9)
+            ax.set_xlim(x0 - x_pad, x0 + width + x_pad)
+
+        if tighten_y:
+            if height > 1e-12:
+                y_pad = max(height * 0.30, 1e-9)
+                ax.set_ylim(y0 - y_pad, y0 + height + y_pad)
+            elif width > 1e-12:
+                half_height = max(width * 0.10, 0.25)
+                ax.set_ylim(y0 - half_height, y0 + half_height)
+
+    def _collapse_uniform_q_labels(self, fig) -> None:
+        """Show one centered value for a uniform q-load instead of two end labels."""
+        if not fig.axes:
+            return
+
+        ax = fig.axes[0]
+        groups = {}
+        for text in list(ax.texts):
+            label = text.get_text().strip()
+            if label.startswith("q="):
+                groups.setdefault(label, []).append(text)
+
+        for items in groups.values():
+            items.sort(key=lambda text: (text.get_position()[0], text.get_position()[1]))
+            for i in range(0, len(items) - 1, 2):
+                first, second = items[i], items[i + 1]
+                x1, y1 = first.get_position()
+                x2, y2 = second.get_position()
+                first.set_position(((x1 + x2) / 2, (y1 + y2) / 2))
+                second.remove()
+
+        if self.distributed_load_unit:
+            for text in ax.texts:
+                label = text.get_text().strip()
+                if label.startswith("q=") and self.distributed_load_unit not in label:
+                    text.set_text(f"{label} {self.distributed_load_unit}")
 
     def _annotate_relevant_values(
         self,
@@ -145,7 +199,6 @@ class SystemElementsPlus(SystemElements):
                 y = y_chunk[i + 1]
                 value = values[i]
                 text = self._format_value(value, decimals)
-
                 dy = 9 if value >= 0 else -11
                 va = "bottom" if value >= 0 else "top"
                 ax.annotate(
@@ -157,6 +210,74 @@ class SystemElementsPlus(SystemElements):
                     va=va,
                     fontsize=9,
                 )
+
+    def _annotate_reactions(self, fig, decimals: int) -> None:
+        """Replace anaStruct's generic R=/T= labels with component-aware labels."""
+        if not fig.axes:
+            return
+
+        ax = fig.axes[0]
+        force_suffix = f" {self.force_unit}" if self.force_unit else ""
+        moment_suffix = f" {self.moment_unit}" if self.moment_unit else ""
+
+        for node in getattr(self, "reaction_forces", {}).values():
+            node_id = getattr(node, "id", "")
+            x = node.vertex.x
+            y = node.vertex.y
+            Fx = float(getattr(node, "Fx", 0.0) or 0.0)
+            Fy = float(getattr(node, "Fy", 0.0) or 0.0)
+            moment = float(getattr(node, "Tz", getattr(node, "Ty", 0.0)) or 0.0)
+
+            if not np.isclose(Fx, 0.0, rtol=1e-5, atol=1e-9):
+                dx = 10 if Fx >= 0 else -10
+                ha = "left" if Fx >= 0 else "right"
+                ax.annotate(
+                    f"R{node_id}x = {self._format_value(Fx, decimals)}{force_suffix}",
+                    xy=(x, y),
+                    xytext=(dx, 4),
+                    textcoords="offset points",
+                    ha=ha,
+                    va="bottom",
+                    fontsize=9,
+                )
+
+            if not np.isclose(Fy, 0.0, rtol=1e-5, atol=1e-9):
+                dy = 12 if Fy >= 0 else -15
+                va = "bottom" if Fy >= 0 else "top"
+                ax.annotate(
+                    f"R{node_id}y = {self._format_value(Fy, decimals)}{force_suffix}",
+                    xy=(x, y),
+                    xytext=(4, dy),
+                    textcoords="offset points",
+                    ha="left",
+                    va=va,
+                    fontsize=9,
+                )
+
+            if not np.isclose(moment, 0.0, rtol=1e-5, atol=1e-9):
+                ax.annotate(
+                    f"M{node_id} = {self._format_value(moment, decimals)}{moment_suffix}",
+                    xy=(x, y),
+                    xytext=(8, 18),
+                    textcoords="offset points",
+                    ha="left",
+                    va="bottom",
+                    fontsize=9,
+                )
+
+    def _label_displacement_values(self, fig) -> None:
+        """Identify native numeric displacement annotations and append their unit."""
+        if not fig.axes:
+            return
+
+        suffix = f" {self.displacement_unit}" if self.displacement_unit else ""
+        for text in fig.axes[0].texts:
+            raw = text.get_text().strip()
+            try:
+                float(raw)
+            except (TypeError, ValueError):
+                continue
+            text.set_text(f"u = {raw}{suffix}")
 
     def show_structure(
         self,
@@ -191,12 +312,9 @@ class SystemElementsPlus(SystemElements):
             ax.set_xlabel(f"x [{self.length_unit}]")
             ax.set_ylabel(f"y [{self.length_unit}]")
 
-        if self.distributed_load_unit:
-            for text in ax.texts:
-                label = text.get_text()
-                if label.startswith("q=") and self.distributed_load_unit not in label:
-                    text.set_text(f"{label} {self.distributed_load_unit}")
-
+        if verbosity == 0:
+            self._collapse_uniform_q_labels(fig)
+        self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
     def show_bending_moment(
@@ -240,6 +358,7 @@ class SystemElementsPlus(SystemElements):
         if self.moment_unit:
             title += f" [{self.moment_unit}]"
         fig.axes[0].set_title(title)
+        self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
     def show_shear_force(
@@ -283,6 +402,7 @@ class SystemElementsPlus(SystemElements):
         if self.force_unit:
             title += f" [{self.force_unit}]"
         fig.axes[0].set_title(title)
+        self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
     def show_axial_force(
@@ -326,6 +446,75 @@ class SystemElementsPlus(SystemElements):
         if self.force_unit:
             title += f" [{self.force_unit}]"
         fig.axes[0].set_title(title)
+        self._tighten_axes(fig, tighten_y=True)
+        return self._finish(fig, show)
+
+    def show_reaction_force(
+        self,
+        verbosity: int = 0,
+        scale: float = 1,
+        offset: Tuple[float, float] = (0, 0),
+        figsize: FigSize = None,
+        show: bool = True,
+        decimals: int = 2,
+    ):
+        size = self._resolve_figsize(figsize)
+        fig = super().show_reaction_force(
+            verbosity=1,
+            scale=scale,
+            offset=offset,
+            figsize=size,
+            show=False,
+        )
+
+        fig.axes[0].set_title("Diagrama de reacciones")
+        if verbosity == 0:
+            self._annotate_reactions(fig, decimals)
+        self._tighten_axes(fig, tighten_y=False)
+        return self._finish(fig, show)
+
+    def show_displacement(
+        self,
+        factor: Optional[float] = None,
+        verbosity: int = 0,
+        scale: float = 1,
+        offset: Tuple[float, float] = (0, 0),
+        figsize: FigSize = None,
+        show: bool = True,
+        linear: bool = False,
+        values_only: bool = False,
+    ):
+        if values_only:
+            return super().show_displacement(
+                factor=factor,
+                verbosity=verbosity,
+                scale=scale,
+                offset=offset,
+                figsize=None,
+                show=show,
+                linear=linear,
+                values_only=True,
+            )
+
+        size = self._resolve_figsize(figsize)
+        fig = super().show_displacement(
+            factor=factor,
+            verbosity=verbosity,
+            scale=scale,
+            offset=offset,
+            figsize=size,
+            show=False,
+            linear=linear,
+            values_only=False,
+        )
+
+        title = "Diagrama de desplazamientos"
+        if self.displacement_unit:
+            title += f" [{self.displacement_unit}]"
+        fig.axes[0].set_title(title)
+        if verbosity == 0:
+            self._label_displacement_values(fig)
+        self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
 
