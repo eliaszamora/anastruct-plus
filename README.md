@@ -5,12 +5,13 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 ## Qué añade
 
 - tamaño de figura automático según la geometría;
-- encuadre más compacto alrededor de la estructura y los diagramas;
+- encuadre compacto con margen visual adicional para evitar apoyos, etiquetas o extremos pegados a los bordes;
 - unidades visuales de longitud, fuerza, carga distribuida, momento y desplazamiento;
 - una sola etiqueta centrada para cargas distribuidas uniformes, separada de los identificadores del modelo;
+- identificadores de nodos en azul e identificadores de elementos en verde, con fondo blanco y offsets geométricos para evitar solapamientos con miembros, apoyos y cargas;
 - etiquetas automáticas en los extremos y máximos/mínimos relevantes de momento, corte y axial;
 - reacciones con componentes identificadas por nodo (`R1x`, `R1y`, `M1`, etc.) y apilado de etiquetas para evitar solapamientos;
-- forma deformada rotulada explícitamente como escala amplificada y magnitud real `u_max = ...` en un recuadro independiente de la curva;
+- forma deformada rotulada explícitamente como escala amplificada y magnitud real `u_max = ...` mediante una anotación cercana con flecha al punto correspondiente de la curva;
 - semántica de ejes segura: no se muestran escalas numéricas que anaStruct usa solo como amplificación gráfica;
 - conserva la API habitual de `anaStruct`, incluyendo `values_only=True`.
 
@@ -66,6 +67,17 @@ las etiquetas visuales se interpretan como:
 - momento: `tonf·m`;
 - desplazamiento: `m`.
 
+## Identificadores del modelo
+
+`show_structure()` conserva la numeración nativa de anaStruct, pero la hace más legible:
+
+- nodos: azul;
+- elementos: verde;
+- ambos: texto en negrita con un pequeño fondo blanco;
+- las etiquetas se separan de la geometría mediante offsets en puntos de pantalla, por lo que la separación no depende del tamaño físico del modelo.
+
+En vigas horizontales, los IDs de elementos se colocan preferentemente bajo el miembro para no competir con las flechas de una carga distribuida situada arriba. En marcos, la colocación se deriva de la geometría y del centro del modelo.
+
 ## Diagramas de esfuerzos
 
 Los diagramas de momento, corte y axial muestran automáticamente:
@@ -81,6 +93,8 @@ ss.show_bending_moment()
 ss.show_shear_force()
 ss.show_axial_force()
 ```
+
+Además, los límites finales reciben un pequeño margen visual adicional para que apoyos y rótulos no queden pegados a los bordes de la figura.
 
 ## Semántica de los ejes
 
@@ -108,11 +122,13 @@ Para la componente vertical, la etiqueta se presenta con el sentido visual del e
 
 ## Desplazamientos
 
-El gráfico conserva la deformada calculada por anaStruct, pero la identifica como una **forma deformada con escala amplificada**. La magnitud numérica real se rotula aparte:
+El gráfico conserva la deformada calculada por anaStruct, pero la identifica como una **forma deformada con escala amplificada**. La magnitud numérica real se muestra junto a la zona correspondiente mediante una flecha guía:
 
 ```text
-u_max = 0.003 m
+u_max = 0.003 m  ──→  punto de la deformada
 ```
+
+La flecha se ancla al punto de la curva deformada más cercano a la posición donde anaStruct ubicó originalmente el valor numérico. Así se mantiene la relación visual entre el valor y el punto que representa sin escribir el texto encima de la curva.
 
 No se realiza conversión automática de `m` a `mm`.
 
@@ -177,9 +193,8 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.3`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
-
+Versión `0.2.4`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
 
 ### Nota sobre la forma deformada
 
-La curva deformada se representa con una escala gráfica amplificada para hacer visible la deformación. Por eso la dirección transversal no presenta una escala numérica de desplazamiento. La magnitud real se muestra mediante la etiqueta `u_max = ...` con la unidad de longitud configurada.
+La curva deformada se representa con una escala gráfica amplificada para hacer visible la deformación. Por eso la dirección transversal no presenta una escala numérica de desplazamiento. La magnitud real se muestra mediante la etiqueta `u_max = ...` con la unidad de longitud configurada y una flecha guía al punto de la curva.
