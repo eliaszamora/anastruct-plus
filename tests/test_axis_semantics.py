@@ -3,21 +3,39 @@ import matplotlib.pyplot as plt
 from test_anastruct_plus import FakeSystemElements, Node, SystemElementsPlus
 
 
-def test_horizontal_result_plots_keep_only_real_longitudinal_axis():
+def test_horizontal_internal_force_plots_use_physical_transverse_axis():
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
-    for method in (
-        ss.show_shear_force,
-        ss.show_bending_moment,
-        ss.show_axial_force,
-        ss.show_reaction_force,
-        ss.show_displacement,
+    for method, ylabel in (
+        (ss.show_shear_force, "V [tonf]"),
+        (ss.show_bending_moment, "M [tonf·m]"),
+        (ss.show_axial_force, "N [tonf]"),
     ):
         fig = method(show=False)
         ax = fig.axes[0]
         assert ax.get_xlabel() == "x [m]"
-        assert ax.get_ylabel() == ""
-        assert len(ax.get_yticks()) == 0
+        assert ax.get_ylabel() == ylabel
+        assert len(ax.get_yticks()) > 0
         plt.close(fig)
+
+
+def test_horizontal_displacement_uses_physical_transverse_axis():
+    ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
+    fig = ss.show_displacement(show=False)
+    ax = fig.axes[0]
+    assert ax.get_xlabel() == "x [m]"
+    assert ax.get_ylabel() == "u_y [m]"
+    assert len(ax.get_yticks()) > 0
+    plt.close(fig)
+
+
+def test_horizontal_reaction_plot_does_not_claim_false_transverse_scale():
+    ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
+    fig = ss.show_reaction_force(show=False)
+    ax = fig.axes[0]
+    assert ax.get_xlabel() == "x [m]"
+    assert ax.get_ylabel() == ""
+    assert len(ax.get_yticks()) == 0
+    plt.close(fig)
 
 
 def test_vertical_result_plot_keeps_only_real_longitudinal_axis():
@@ -47,7 +65,7 @@ def test_frame_result_plot_hides_both_scaled_coordinate_axes():
     plt.close(fig)
 
 
-def test_structure_ids_are_distinct_and_offset_from_geometry(monkeypatch):
+def test_structure_ids_are_distinct_prefixed_and_offset_from_geometry(monkeypatch):
     native_show_structure = FakeSystemElements.show_structure
 
     def show_structure_with_node_ids(self, *args, **kwargs):
@@ -80,6 +98,8 @@ def test_structure_ids_are_distinct_and_offset_from_geometry(monkeypatch):
 
     assert len(node_labels) == 2
     assert len(element_labels) == 1
+    assert {t.get_text() for t in node_labels} == {"N1", "N2"}
+    assert {t.get_text() for t in element_labels} == {"E1"}
     assert all(t.get_color() == "tab:blue" for t in node_labels)
     assert all(t.get_color() == "tab:green" for t in element_labels)
     assert all(t.get_fontweight() == "bold" for t in node_labels + element_labels)

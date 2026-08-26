@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 from test_anastruct_plus import Node, SystemElementsPlus, texts
 
 
-def test_horizontal_result_plot_keeps_left_frame_spine_visible():
+def test_horizontal_result_plot_keeps_left_frame_spine_and_physical_ticks():
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
     fig = ss.show_bending_moment(show=False)
     ax = fig.axes[0]
-    assert len(ax.get_yticks()) == 0
+    assert len(ax.get_yticks()) > 0
+    assert ax.get_ylabel() == "M [tonf·m]"
     assert ax.spines["left"].get_visible()
     plt.close(fig)
 

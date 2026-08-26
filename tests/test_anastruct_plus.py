@@ -232,7 +232,7 @@ def test_structure_adds_units_collapses_uniform_q_and_tightens_axes():
     assert ax.get_ylabel() == "y [m]"
     assert texts(fig).count("q=10.0 tonf/m") == 1
     q_label = next(t for t in ax.texts if t.get_text() == "q=10.0 tonf/m")
-    element_label = next(t for t in ax.texts if t.get_text() == "1")
+    element_label = next(t for t in ax.texts if t.get_text() == "E1")
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     assert not q_label.get_window_extent(renderer).overlaps(element_label.get_window_extent(renderer))
