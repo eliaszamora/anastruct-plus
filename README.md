@@ -9,10 +9,10 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 - unidades visuales de longitud, fuerza, carga distribuida, momento y desplazamiento;
 - una sola etiqueta centrada para cargas distribuidas uniformes, separada de los identificadores del modelo;
 - identificadores de nodos en azul e identificadores de elementos en verde, con fondo blanco y offsets geométricos para evitar solapamientos con miembros, apoyos y cargas;
-- etiquetas automáticas en los extremos y máximos/mínimos relevantes de momento, corte y axial;
+- etiquetas automáticas en los extremos y máximos/mínimos relevantes de momento, corte y axial, con la unidad física escrita junto a cada valor;
 - reacciones con componentes identificadas por nodo (`R1x`, `R1y`, `M1`, etc.) y apilado de etiquetas para evitar solapamientos;
 - forma deformada rotulada explícitamente como escala amplificada y magnitud real `u_max = ...` mediante una anotación cercana con flecha al punto correspondiente de la curva;
-- semántica de ejes segura: no se muestran escalas numéricas que anaStruct usa solo como amplificación gráfica;
+- semántica de ejes segura: no se muestran escalas numéricas que anaStruct usa solo como amplificación gráfica, pero se conserva el marco completo de la figura;
 - conserva la API habitual de `anaStruct`, incluyendo `values_only=True`.
 
 > `anaStruct Plus` no convierte unidades. `anaStruct` sigue trabajando con números sin unidades; debes mantener un sistema coherente. Las unidades indicadas aquí son etiquetas de presentación.
@@ -86,6 +86,7 @@ Los diagramas de momento, corte y axial muestran automáticamente:
 - valor en el extremo final;
 - máximo global del elemento;
 - mínimo global del elemento;
+- la unidad física directamente junto al número (`20.00 tonf·m`, `15.00 tonf`, etc.);
 - sin duplicar una etiqueta si el extremo coincide con un máximo o mínimo.
 
 ```python
@@ -103,6 +104,7 @@ Además, los límites finales reciben un pequeño margen visual adicional para q
 - en una viga horizontal se conserva únicamente `x [unidad]`, porque `x` sí representa la posición longitudinal real;
 - en un elemento/modelo vertical se conserva únicamente `y [unidad]`;
 - en marcos con elementos en distintas direcciones se ocultan ambos ejes numéricos en los diagramas de resultados, porque no existe un único eje longitudinal;
+- el borde del marco permanece visible aunque la escala transversal esté oculta, para que la figura no parezca recortada;
 - las magnitudes físicas se leen en las etiquetas del propio diagrama y en sus unidades (`tonf`, `tonf·m`, etc.);
 - `show_structure()` conserva ambos ejes geométricos `x` e `y`, ya que allí sí representan coordenadas reales del modelo.
 
@@ -193,7 +195,7 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.4`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
+Versión `0.2.5`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
 
 ### Nota sobre la forma deformada
 

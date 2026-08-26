@@ -244,9 +244,9 @@ def test_bending_moment_labels_endpoints_and_global_extrema_including_zero_end()
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
     fig = ss.show_bending_moment(show=False)
     labels = texts(fig)
-    assert "20.00" in labels
-    assert "0.00" in labels
-    assert "-11.20" in labels
+    assert "20.00 tonf·m" in labels
+    assert "0.00 tonf·m" in labels
+    assert "-11.20 tonf·m" in labels
     assert fig.axes[0].get_title() == "Diagrama de momento flector [tonf·m]"
 
 
@@ -254,17 +254,17 @@ def test_bending_moment_does_not_duplicate_same_index():
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
     fig = ss.show_bending_moment(show=False)
     labels = texts(fig)
-    assert labels.count("20.00") == 1
-    assert labels.count("0.00") == 1
-    assert labels.count("-11.20") == 1
+    assert labels.count("20.00 tonf·m") == 1
+    assert labels.count("0.00 tonf·m") == 1
+    assert labels.count("-11.20 tonf·m") == 1
 
 
 def test_shear_force_labels_endpoints_and_extrema():
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
     fig = ss.show_shear_force(show=False)
     labels = texts(fig)
-    assert "25.00" in labels
-    assert "-15.00" in labels
+    assert "25.00 tonf" in labels
+    assert "-15.00 tonf" in labels
     assert fig.axes[0].get_title() == "Diagrama de esfuerzo cortante [tonf]"
 
 
@@ -272,7 +272,7 @@ def test_axial_force_uses_force_unit_and_avoids_repeated_constant_labels():
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
     fig = ss.show_axial_force(show=False)
     labels = texts(fig)
-    assert labels.count("4.00") == 2
+    assert labels.count("4.00 tonf") == 2
     assert fig.axes[0].get_title() == "Diagrama de fuerza axial [tonf]"
 
 
@@ -384,5 +384,5 @@ def test_annotation_cursor_stays_aligned_when_truss_has_no_moment_results():
     fig, _ = plt.subplots()
     ss._annotate_relevant_values(fig, "M", x, y, 2)
     annotations = fig.axes[0].texts
-    first = next(t for t in annotations if t.get_text() == "20.00")
+    first = next(t for t in annotations if t.get_text() == "20.00 tonf·m")
     assert first.xy[0] > 4.0
