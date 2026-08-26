@@ -2,6 +2,7 @@ import subprocess
 import sys
 import textwrap
 
+# Integration tests run in isolated interpreters so they always exercise real anaStruct.
 
 BASE = r'''
 import matplotlib
