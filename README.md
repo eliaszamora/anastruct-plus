@@ -10,7 +10,7 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 - una sola etiqueta centrada para cargas distribuidas uniformes;
 - etiquetas automáticas en los extremos y máximos/mínimos relevantes de momento, corte y axial;
 - reacciones con componentes identificadas por nodo (`R1x`, `R1y`, `M1`, etc.);
-- desplazamientos con unidad e identificación `u = ...`;
+- forma deformada rotulada explícitamente como escala amplificada y magnitud real identificada como `u_max = ...`;
 - conserva la API habitual de `anaStruct`, incluyendo `values_only=True`.
 
 > `anaStruct Plus` no convierte unidades. `anaStruct` sigue trabajando con números sin unidades; debes mantener un sistema coherente. Las unidades indicadas aquí son etiquetas de presentación.
@@ -91,14 +91,14 @@ R1y = ... tonf
 M1  = ... tonf·m
 ```
 
-Los signos numéricos se mantienen según la convención de anaStruct.
+Para la componente vertical, la etiqueta se presenta con el sentido visual del eje global mostrado en el gráfico. Esto evita que una reacción dibujada hacia arriba aparezca rotulada con signo negativo cuando `invert_y_loads=True`. El solver y sus resultados internos no se modifican.
 
 ## Desplazamientos
 
-El gráfico conserva la deformada calculada por anaStruct y añade unidad e identificación a sus valores relevantes:
+El gráfico conserva la deformada calculada por anaStruct, pero la identifica como una **forma deformada con escala amplificada**. La magnitud numérica real se rotula aparte:
 
 ```text
-u = 0.003 m
+u_max = 0.003 m
 ```
 
 No se realiza conversión automática de `m` a `mm`.
@@ -164,4 +164,8 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.0`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
+Versión `0.2.1`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
+
+### Nota sobre la forma deformada
+
+La curva deformada se representa con una escala gráfica amplificada para hacer visible la deformación. Por eso el eje vertical del dibujo no debe interpretarse como el desplazamiento real. La magnitud real se muestra mediante la etiqueta `u_max = ...` con la unidad de longitud configurada.
