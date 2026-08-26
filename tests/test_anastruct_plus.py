@@ -96,6 +96,7 @@ class FakeSystemElements:
         if verbosity == 0:
             ax.text(0, 0.2, "q=10.0")
             ax.text(4, 0.2, "q=10.0")
+            ax.text(2, 0.16, "1")
         self._wide_axes(ax)
         if show:
             plt.show()
@@ -230,6 +231,11 @@ def test_structure_adds_units_collapses_uniform_q_and_tightens_axes():
     assert ax.get_xlabel() == "x [m]"
     assert ax.get_ylabel() == "y [m]"
     assert texts(fig).count("q=10.0 tonf/m") == 1
+    q_label = next(t for t in ax.texts if t.get_text() == "q=10.0 tonf/m")
+    element_label = next(t for t in ax.texts if t.get_text() == "1")
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    assert not q_label.get_window_extent(renderer).overlaps(element_label.get_window_extent(renderer))
     assert ax.get_xlim()[0] > -1.0
     assert ax.get_xlim()[1] < 5.0
 
@@ -288,6 +294,11 @@ def test_reaction_force_has_units_clear_labels_and_auto_framing():
     assert "M1 = 20.00 tonf·m" in labels
     assert "R2y = 15.00 tonf" in labels
     assert not any(label.startswith("R=") or label.startswith("T=") for label in labels)
+    r1 = next(t for t in fig.axes[0].texts if t.get_text() == "R1y = 25.00 tonf")
+    m1 = next(t for t in fig.axes[0].texts if t.get_text() == "M1 = 20.00 tonf·m")
+    assert abs(m1.get_position()[1] - r1.get_position()[1]) >= 16
+    r2 = next(t for t in fig.axes[0].texts if t.get_text() == "R2y = 15.00 tonf")
+    assert r2.get_ha() == "right"
     xmin, xmax = fig.axes[0].get_xlim()
     assert xmin > -1.0
     assert xmax < 5.0
@@ -309,6 +320,9 @@ def test_displacement_has_unit_identified_value_and_auto_framing():
     assert fig.axes[0].get_title() == "Forma deformada (escala amplificada)"
     assert "u_max = 0.003 m" in labels
     assert "0.003" not in labels
+    u_label = next(t for t in fig.axes[0].texts if t.get_text() == "u_max = 0.003 m")
+    assert hasattr(u_label, "xy")
+    assert abs(u_label.get_position()[1]) >= 10
     xmin, xmax = fig.axes[0].get_xlim()
     assert xmin > -1.0
     assert xmax < 5.0
