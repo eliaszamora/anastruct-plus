@@ -5,27 +5,26 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 ## Qué añade
 
 - tamaño de figura automático según la geometría;
-- encuadre compacto con margen visual adicional para evitar apoyos, etiquetas o extremos pegados a los bordes;
+- encuadre compacto con margen visual para evitar recortes;
 - unidades visuales de longitud, fuerza, carga distribuida, momento y desplazamiento;
-- una sola etiqueta centrada para cargas distribuidas uniformes, separada de los identificadores del modelo;
-- identificadores de nodos en azul e identificadores de elementos en verde, con fondo blanco y offsets geométricos para evitar solapamientos con miembros, apoyos y cargas;
-- etiquetas automáticas en los extremos y máximos/mínimos relevantes de momento, corte y axial, con la unidad física escrita junto a cada valor;
-- reacciones con componentes identificadas por nodo (`R1x`, `R1y`, `M1`, etc.) y apilado de etiquetas para evitar solapamientos;
-- forma deformada rotulada explícitamente como escala amplificada y magnitud real `u_max = ...` mediante una anotación cercana con flecha al punto correspondiente de la curva;
-- semántica de ejes segura: no se muestran escalas numéricas que anaStruct usa solo como amplificación gráfica, pero se conserva el marco completo de la figura;
-- conserva la API habitual de `anaStruct`, incluyendo `values_only=True`.
+- una sola etiqueta centrada para cargas distribuidas uniformes;
+- IDs explícitos: nodos `N1`, `N2`, ... en azul y elementos `E1`, `E2`, ... en verde;
+- valores automáticos en extremos y máximos/mínimos relevantes de momento, corte y axial;
+- unidades escritas directamente junto a los resultados (`20.00 tonf·m`, `15.00 tonf`, etc.);
+- reacciones identificadas por nodo (`R1x`, `R1y`, `M1`, etc.);
+- anotación `u_max = ...` próxima a la deformada y conectada mediante flecha;
+- ejes físicos calibrados para vigas rectas horizontales;
+- conserva la API habitual de `anaStruct`, incluido `values_only=True`.
 
-> `anaStruct Plus` no convierte unidades. `anaStruct` sigue trabajando con números sin unidades; debes mantener un sistema coherente. Las unidades indicadas aquí son etiquetas de presentación.
+> `anaStruct Plus` no convierte unidades. `anaStruct` sigue trabajando con números sin unidades; debes mantener un sistema coherente. `force_unit` y `length_unit` definen las unidades de presentación.
 
 ## Instalación en Google Colab
 
 ```python
-!pip install -q git+https://github.com/eliaszamora/anastruct-plus.git
+!pip install -q --upgrade --no-cache-dir git+https://github.com/eliaszamora/anastruct-plus.git
 ```
 
-No es necesario instalar `anastruct` aparte: está declarado como dependencia de `anastruct-plus`.
-
-Luego importa el `SystemElements` extendido:
+No es necesario instalar `anastruct` aparte: es una dependencia de `anastruct-plus`.
 
 ```python
 from anastruct_plus import SystemElements
@@ -53,66 +52,61 @@ ss.show_bending_moment()
 ss.show_displacement()
 ```
 
-Con:
+Con `force_unit="tonf"` y `length_unit="m"`:
 
-```python
-ss = SystemElements(force_unit="tonf", length_unit="m")
-```
+- fuerza → `tonf`;
+- longitud → `m`;
+- carga distribuida → `tonf/m`;
+- momento → `tonf·m`;
+- desplazamiento → `m`.
 
-las etiquetas visuales se interpretan como:
+## Estructura
 
-- fuerza: `tonf`;
-- longitud: `m`;
-- carga distribuida: `tonf/m`;
-- momento: `tonf·m`;
-- desplazamiento: `m`.
+`show_structure()` conserva las coordenadas geométricas reales y muestra:
 
-## Identificadores del modelo
+- eje `x [m]`;
+- eje `y [m]`;
+- nodos como `N1`, `N2`, ...;
+- elementos como `E1`, `E2`, ...;
+- IDs separados mediante offsets de pantalla para evitar solapamientos con miembros, apoyos y cargas.
 
-`show_structure()` conserva la numeración nativa de anaStruct, pero la hace más legible:
+En vigas horizontales, los IDs de elementos se ubican preferentemente bajo la barra para no competir con cargas distribuidas situadas arriba.
 
-- nodos: azul;
-- elementos: verde;
-- ambos: texto en negrita con un pequeño fondo blanco;
-- las etiquetas se separan de la geometría mediante offsets en puntos de pantalla, por lo que la separación no depende del tamaño físico del modelo.
+## Cortante, momento y axial
 
-En vigas horizontales, los IDs de elementos se colocan preferentemente bajo el miembro para no competir con las flechas de una carga distribuida situada arriba. En marcos, la colocación se deriva de la geometría y del centro del modelo.
-
-## Diagramas de esfuerzos
-
-Los diagramas de momento, corte y axial muestran automáticamente:
+Los diagramas muestran automáticamente:
 
 - valor en el extremo inicial;
 - valor en el extremo final;
 - máximo global del elemento;
 - mínimo global del elemento;
-- la unidad física directamente junto al número (`20.00 tonf·m`, `15.00 tonf`, etc.);
-- sin duplicar una etiqueta si el extremo coincide con un máximo o mínimo.
+- unidad física junto a cada valor;
+- sin duplicar etiquetas cuando un extremo coincide con un máximo o mínimo.
 
-```python
-ss.show_bending_moment()
-ss.show_shear_force()
-ss.show_axial_force()
+Para una **viga recta horizontal**, v0.2.6 reconstruye además la escala transversal física a partir de los resultados y del factor gráfico utilizado por anaStruct:
+
+```text
+Cortante  → V [tonf]
+Momento   → M [tonf·m]
+Axial     → N [tonf]
 ```
 
-Además, los límites finales reciben un pequeño margen visual adicional para que apoyos y rótulos no queden pegados a los bordes de la figura.
+Por ejemplo, una etiqueta `M = 20.00 tonf·m` queda alineada con la ordenada `20.00` del eje `M [tonf·m]`. La cuadrícula horizontal utiliza esa misma escala física.
 
-## Semántica de los ejes
+Esto corrige el problema de las versiones anteriores, donde anaStruct podía dibujar un resultado físico de `20 tonf·m` a una coordenada gráfica aproximada de `0.6`.
 
-`anaStruct` escala transversalmente los diagramas de momento, corte, axial, reacciones y deformada para hacerlos visibles. Esa amplitud dibujada **no es la magnitud física** del resultado. `anaStruct Plus` evita mostrar ticks numéricos que puedan sugerir lo contrario:
+## Alcance de los ejes físicos
 
-- en una viga horizontal se conserva únicamente `x [unidad]`, porque `x` sí representa la posición longitudinal real;
-- en un elemento/modelo vertical se conserva únicamente `y [unidad]`;
-- en marcos con elementos en distintas direcciones se ocultan ambos ejes numéricos en los diagramas de resultados, porque no existe un único eje longitudinal;
-- el borde del marco permanece visible aunque la escala transversal esté oculta, para que la figura no parezca recortada;
-- las magnitudes físicas se leen en las etiquetas del propio diagrama y en sus unidades (`tonf`, `tonf·m`, etc.);
-- `show_structure()` conserva ambos ejes geométricos `x` e `y`, ya que allí sí representan coordenadas reales del modelo.
+La calibración transversal se activa únicamente cuando existe una interpretación inequívoca: una estructura recta horizontal.
 
-Esto evita casos visualmente incorrectos como un máximo `M = 20 tonf·m` dibujado a una ordenada gráfica `0.6` que podría confundirse con una escala física.
+- **Viga horizontal:** `x` representa la posición real y el eje transversal del resultado se calibra físicamente.
+- **Modelo vertical:** se conserva el eje longitudinal `y [unidad]`; no se inventa una escala transversal.
+- **Marco 2D general:** se ocultan las escalas transversales gráficas de anaStruct porque no existe un único eje global que pueda representar simultáneamente los diagramas locales de todos los miembros.
+- **Reacciones:** se conserva la posición longitudinal, pero no se crea un eje Y de fuerza a partir de la longitud gráfica de las flechas, ya que esas flechas están escaladas para presentación.
 
 ## Reacciones
 
-Las etiquetas genéricas `R=` y `T=` de anaStruct se reemplazan por componentes identificadas por nodo:
+Las etiquetas genéricas de anaStruct se reemplazan por componentes identificadas:
 
 ```text
 R1x = ... tonf
@@ -120,17 +114,21 @@ R1y = ... tonf
 M1  = ... tonf·m
 ```
 
-Para la componente vertical, la etiqueta se presenta con el sentido visual del eje global mostrado en el gráfico. Esto evita que una reacción dibujada hacia arriba aparezca rotulada con signo negativo cuando `invert_y_loads=True`. El solver y sus resultados internos no se modifican.
+La convención visual de `R1y` respeta el sentido mostrado en el gráfico cuando `invert_y_loads=True`. El solver y sus resultados internos no se modifican.
 
 ## Desplazamientos
 
-El gráfico conserva la deformada calculada por anaStruct, pero la identifica como una **forma deformada con escala amplificada**. La magnitud numérica real se muestra junto a la zona correspondiente mediante una flecha guía:
+Para una viga horizontal, la forma deformada conserva la amplificación gráfica de anaStruct, pero el eje se calibra con la magnitud física del desplazamiento:
 
 ```text
-u_max = 0.003 m  ──→  punto de la deformada
+u_y [m]
 ```
 
-La flecha se ancla al punto de la curva deformada más cercano a la posición donde anaStruct ubicó originalmente el valor numérico. Así se mantiene la relación visual entre el valor y el punto que representa sin escribir el texto encima de la curva.
+La etiqueta de máximo permanece asociada a la curva mediante una flecha:
+
+```text
+u_max = 0.003 m  ──→  punto correspondiente
+```
 
 No se realiza conversión automática de `m` a `mm`.
 
@@ -143,16 +141,18 @@ ss.show_bending_moment()
 ss.show_reaction_force()
 ```
 
-Puedes cambiarlo donde corresponde:
+Puedes cambiar la precisión de las etiquetas donde corresponde:
 
 ```python
 ss.show_bending_moment(decimals=3)
 ss.show_reaction_force(decimals=3)
 ```
 
+Los ticks de esfuerzos usan dos decimales para mantener consistencia con las etiquetas. Los desplazamientos conservan precisión suficiente para magnitudes pequeñas.
+
 ## Tamaño de figura
 
-Por defecto se ajusta automáticamente a la geometría, por lo que normalmente no necesitas escribir `figsize`:
+Normalmente no necesitas especificar `figsize`:
 
 ```python
 ss.show_structure()
@@ -168,15 +168,9 @@ Aun puedes imponer un tamaño manual:
 ss.show_bending_moment(figsize=(10, 4))
 ```
 
-O pedir explícitamente el autoajuste:
-
-```python
-ss.show_bending_moment(figsize="auto")
-```
-
 ## API
 
-Se mantienen los nombres familiares de `anaStruct`:
+Se mantienen los nombres familiares de anaStruct:
 
 ```python
 ss.show_structure()
@@ -187,7 +181,7 @@ ss.show_axial_force()
 ss.show_displacement()
 ```
 
-También puedes importar el nombre explícito de la subclase:
+También puedes importar explícitamente la subclase:
 
 ```python
 from anastruct_plus import SystemElementsPlus
@@ -195,8 +189,4 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.5`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
-
-### Nota sobre la forma deformada
-
-La curva deformada se representa con una escala gráfica amplificada para hacer visible la deformación. Por eso la dirección transversal no presenta una escala numérica de desplazamiento. La magnitud real se muestra mediante la etiqueta `u_max = ...` con la unidad de longitud configurada y una flecha guía al punto de la curva.
+Versión `0.2.6`. anaStruct realiza el análisis estructural; anaStruct Plus modifica únicamente la presentación y el postproceso gráfico.
