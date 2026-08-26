@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, v0.2.7-align-reaction-plot]
   pull_request:
 
 jobs:
