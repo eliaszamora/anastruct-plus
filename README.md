@@ -1,6 +1,6 @@
 # anaStruct Plus
 
-Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para mejorar sus gráficos de postproceso sin cambiar el solver estructural.
+Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para mejorar sus gráficos y su entrada de cargas sin modificar el solver estructural.
 
 ## Qué añade
 
@@ -8,6 +8,7 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 - encuadre compacto con margen visual para evitar recortes;
 - unidades visuales de longitud, fuerza, carga distribuida, momento y desplazamiento;
 - una sola etiqueta centrada para cargas distribuidas uniformes;
+- componentes distribuidas nombradas, por ejemplo `pp=-4, sc=-3`, combinadas de forma segura en una única resultante para el solver;
 - IDs explícitos: nodos `N1`, `N2`, ... en azul y elementos `E1`, `E2`, ... en verde;
 - valores automáticos en extremos y máximos/mínimos relevantes de momento, corte y axial;
 - unidades escritas directamente junto a los resultados (`20.00 tonf·m`, `15.00 tonf`, etc.);
@@ -72,6 +73,55 @@ Con `force_unit="tonf"` y `length_unit="m"`:
 - IDs separados mediante offsets de pantalla para evitar solapamientos con miembros, apoyos y cargas.
 
 En vigas horizontales, los IDs de elementos se ubican preferentemente bajo la barra para no competir con cargas distribuidas situadas arriba.
+
+## Componentes de carga distribuida
+
+Desde la versión `0.2.8`, una carga distribuida puede introducirse mediante nombres elegidos directamente como argumentos de `q_load()`:
+
+```python
+ss.q_load(element_id=1, pp=-4, sc=-3)
+```
+
+También pueden añadirse en llamadas separadas:
+
+```python
+ss.q_load(element_id=1, pp=-4)
+ss.q_load(element_id=1, sc=-3)
+```
+
+En ambos casos anaStruct Plus conserva las componentes por separado, calcula algebraicamente la resultante y entrega **solo esa resultante** al solver de anaStruct. Por ejemplo:
+
+```text
+pp = -4
+sc = -3
+Σq = -7
+```
+
+produce el mismo análisis estructural que:
+
+```python
+ss.q_load(element_id=1, q=-7)
+```
+
+`show_structure()` mantiene una única fila de flechas correspondiente a la carga resultante y muestra el desglose de componentes, por ejemplo:
+
+```text
+pp = 4.0 tonf/m
+sc = 3.0 tonf/m
+Σq = 7.0 tonf/m
+```
+
+Esto evita superponer varias filas de flechas sobre la misma viga y mantiene visible el origen de la carga total.
+
+La sintaxis tradicional sigue disponible y conserva el comportamiento nativo de anaStruct:
+
+```python
+ss.q_load(element_id=1, q=-7)
+```
+
+Si se usa dos veces `q=` sobre el mismo elemento, la segunda llamada reemplaza a la primera, igual que en anaStruct original. No se permite mezclar `q=` y componentes nombradas en la misma llamada porque sería ambiguo.
+
+En esta primera versión, las componentes nombradas requieren un único `element_id`, valores escalares y no admiten `q_perp`.
 
 ## Cortante, momento y axial
 
@@ -192,4 +242,4 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.7`. anaStruct realiza el análisis estructural; anaStruct Plus modifica únicamente la presentación y el postproceso gráfico.
+Versión `0.2.8`. anaStruct realiza el análisis estructural; anaStruct Plus administra la descomposición de cargas y modifica la presentación/postproceso sin cambiar el solver.

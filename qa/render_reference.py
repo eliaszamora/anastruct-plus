@@ -34,3 +34,13 @@ for name, method in (
     fig = method(show=False)
     fig.savefig(OUTPUT / f"{name}.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
+
+named = SystemElements(force_unit="tonf", length_unit="m")
+named.add_element(location=[[0, 0], [4, 0]])
+named.add_support_fixed(node_id=1)
+named.add_support_hinged(node_id=2)
+named.q_load(element_id=1, pp_c=-5, sc_c=-10)
+
+fig = named.show_structure(show=False)
+fig.savefig(OUTPUT / "06_named_load_components.png", dpi=150, bbox_inches="tight")
+plt.close(fig)
