@@ -39,6 +39,7 @@ class FakeSystemElements:
         self.figsize = figsize
         self.node_map = {1: Node(0, 0, 1), 2: Node(4, 0, 2)}
         self.element_map = {1: Element(1)}
+        self.orientation_cs = -1
         self.reaction_forces = {
             1: Node(0, 0, 1, Fx=0.0, Fy=-25.0, Tz=20.0),
             2: Node(4, 0, 2, Fx=0.0, Fy=-15.0, Tz=0.0),
@@ -283,21 +284,30 @@ def test_reaction_force_has_units_clear_labels_and_auto_framing():
     fig = ss.show_reaction_force(show=False)
     labels = texts(fig)
     assert fig.axes[0].get_title() == "Diagrama de reacciones"
-    assert "R1y = -25.00 tonf" in labels
+    assert "R1y = 25.00 tonf" in labels
     assert "M1 = 20.00 tonf·m" in labels
-    assert "R2y = -15.00 tonf" in labels
+    assert "R2y = 15.00 tonf" in labels
     assert not any(label.startswith("R=") or label.startswith("T=") for label in labels)
     xmin, xmax = fig.axes[0].get_xlim()
     assert xmin > -1.0
     assert xmax < 5.0
 
 
+def test_reaction_vertical_sign_respects_non_inverted_coordinates():
+    ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
+    ss.orientation_cs = 1
+    fig = ss.show_reaction_force(show=False)
+    labels = texts(fig)
+    assert "R1y = -25.00 tonf" in labels
+    assert "R2y = -15.00 tonf" in labels
+
+
 def test_displacement_has_unit_identified_value_and_auto_framing():
     ss = SystemElementsPlus(force_unit="tonf", length_unit="m")
     fig = ss.show_displacement(show=False)
     labels = texts(fig)
-    assert fig.axes[0].get_title() == "Diagrama de desplazamientos [m]"
-    assert "u = 0.003 m" in labels
+    assert fig.axes[0].get_title() == "Forma deformada (escala amplificada)"
+    assert "u_max = 0.003 m" in labels
     assert "0.003" not in labels
     xmin, xmax = fig.axes[0].get_xlim()
     assert xmin > -1.0
