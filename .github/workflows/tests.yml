@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, v0.2.5-result-units-frame]
   pull_request:
 
 jobs:
