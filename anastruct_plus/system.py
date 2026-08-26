@@ -120,8 +120,6 @@ class SystemElementsPlus(SystemElements):
                 y_pad = max(height * 0.30, 1e-9)
                 ax.set_ylim(y0 - y_pad, y0 + height + y_pad)
             elif width > 1e-12:
-                # Horizontal structures still need a small vertical window for
-                # supports, load arrows and labels.
                 half_height = max(width * 0.10, 0.25)
                 ax.set_ylim(y0 - half_height, y0 + half_height)
 
@@ -139,8 +137,6 @@ class SystemElementsPlus(SystemElements):
 
         for items in groups.values():
             items.sort(key=lambda text: (text.get_position()[0], text.get_position()[1]))
-            # Native anaStruct places q_start and q_end labels. Equal consecutive
-            # values indicate a uniform load; collapse each pair to its midpoint.
             for i in range(0, len(items) - 1, 2):
                 first, second = items[i], items[i + 1]
                 x1, y1 = first.get_position()
@@ -148,10 +144,6 @@ class SystemElementsPlus(SystemElements):
                 first.set_position(((x1 + x2) / 2, (y1 + y2) / 2))
                 second.remove()
 
-        # Move q-load labels a few points above anaStruct's native position so
-        # they do not collide with element/node identifiers. Re-create them as
-        # annotations so the separation is screen-space based and independent
-        # of the model dimensions.
         for text in list(ax.texts):
             label = text.get_text().strip()
             if not label.startswith("q="):
@@ -188,11 +180,7 @@ class SystemElementsPlus(SystemElements):
             results = [results]
 
         cursor = 0
-        plot_attribute = {
-            "M": "bending_moment",
-            "Q": "shear_force",
-            "N": "axial_force",
-        }[result_key]
+        plot_attribute = {"M": "bending_moment", "Q": "shear_force", "N": "axial_force"}[result_key]
 
         for result in results:
             values = result.get(result_key)
@@ -224,15 +212,7 @@ class SystemElementsPlus(SystemElements):
                 text = self._format_value(value, decimals)
                 dy = 9 if value >= 0 else -11
                 va = "bottom" if value >= 0 else "top"
-                ax.annotate(
-                    text,
-                    xy=(x, y),
-                    xytext=(0, dy),
-                    textcoords="offset points",
-                    ha="center",
-                    va=va,
-                    fontsize=9,
-                )
+                ax.annotate(text, xy=(x, y), xytext=(0, dy), textcoords="offset points", ha="center", va=va, fontsize=9)
 
     def _annotate_reactions(self, fig, decimals: int) -> None:
         """Replace anaStruct's generic R=/T= labels with component-aware labels."""
@@ -242,7 +222,6 @@ class SystemElementsPlus(SystemElements):
         ax = fig.axes[0]
         force_suffix = f" {self.force_unit}" if self.force_unit else ""
         moment_suffix = f" {self.moment_unit}" if self.moment_unit else ""
-
         node_xs = [node.vertex.x for node in getattr(self, "node_map", {}).values()]
         x_min = min(node_xs) if node_xs else 0.0
         x_max = max(node_xs) if node_xs else 0.0
@@ -260,17 +239,8 @@ class SystemElementsPlus(SystemElements):
             if not np.isclose(Fx, 0.0, rtol=1e-5, atol=1e-9):
                 dx = 10 if Fx >= 0 else -10
                 ha = "left" if Fx >= 0 else "right"
-                ax.annotate(
-                    f"R{node_id}x = {self._format_value(Fx, decimals)}{force_suffix}",
-                    xy=(x, y),
-                    xytext=(dx, 4),
-                    textcoords="offset points",
-                    ha=ha,
-                    va="bottom",
-                    fontsize=9,
-                )
+                ax.annotate(f"R{node_id}x = {self._format_value(Fx, decimals)}{force_suffix}", xy=(x, y), xytext=(dx, 4), textcoords="offset points", ha=ha, va="bottom", fontsize=9)
 
-            # Keep labels inside the plot at exterior supports.
             at_right_edge = abs(x - x_max) <= 1e-9 + 1e-6 * x_span
             inward_dx = -5 if at_right_edge else 5
             inward_ha = "right" if at_right_edge else "left"
@@ -280,29 +250,11 @@ class SystemElementsPlus(SystemElements):
                 dy = 12 if Fy_display >= 0 else -15
                 va = "bottom" if Fy_display >= 0 else "top"
                 fy_on_top = Fy_display >= 0
-                ax.annotate(
-                    f"R{node_id}y = {self._format_value(Fy_display, decimals)}{force_suffix}",
-                    xy=(x, y),
-                    xytext=(inward_dx, dy),
-                    textcoords="offset points",
-                    ha=inward_ha,
-                    va=va,
-                    fontsize=9,
-                )
+                ax.annotate(f"R{node_id}y = {self._format_value(Fy_display, decimals)}{force_suffix}", xy=(x, y), xytext=(inward_dx, dy), textcoords="offset points", ha=inward_ha, va=va, fontsize=9)
 
             if not np.isclose(moment, 0.0, rtol=1e-5, atol=1e-9):
-                # If an upward vertical reaction is already above this node,
-                # stack the moment label higher instead of letting both labels overlap.
                 moment_dy = 32 if fy_on_top else 18
-                ax.annotate(
-                    f"M{node_id} = {self._format_value(moment, decimals)}{moment_suffix}",
-                    xy=(x, y),
-                    xytext=(inward_dx, moment_dy),
-                    textcoords="offset points",
-                    ha=inward_ha,
-                    va="bottom",
-                    fontsize=9,
-                )
+                ax.annotate(f"M{node_id} = {self._format_value(moment, decimals)}{moment_suffix}", xy=(x, y), xytext=(inward_dx, moment_dy), textcoords="offset points", ha=inward_ha, va="bottom", fontsize=9)
 
     def _label_displacement_values(self, fig) -> None:
         """Identify native numeric displacement annotations and append their unit."""
@@ -325,12 +277,8 @@ class SystemElementsPlus(SystemElements):
             color = text.get_color()
             fontsize = text.get_fontsize()
             text.remove()
-
-            # Put the value on the free side of the deformed curve instead of
-            # directly on top of it. The offset is in points, so it remains
-            # legible regardless of the deformation amplification factor.
             above_curve = y <= reference_y
-            dy = 12 if above_curve else -12
+            dy = 22 if above_curve else -22
             va = "bottom" if above_curve else "top"
             ax.annotate(
                 f"u_max = {raw}{suffix}",
@@ -343,81 +291,28 @@ class SystemElementsPlus(SystemElements):
                 fontsize=fontsize,
             )
 
-    def show_structure(
-        self,
-        verbosity: int = 0,
-        scale: float = 1.0,
-        offset: Tuple[float, float] = (0, 0),
-        figsize: FigSize = None,
-        show: bool = True,
-        supports: bool = True,
-        values_only: bool = False,
-        annotations: bool = False,
-    ):
+    def show_structure(self, verbosity: int = 0, scale: float = 1.0, offset: Tuple[float, float] = (0, 0), figsize: FigSize = None, show: bool = True, supports: bool = True, values_only: bool = False, annotations: bool = False):
         if values_only:
-            return super().show_structure(
-                verbosity, scale, offset, None, show, supports, True, annotations
-            )
-
+            return super().show_structure(verbosity, scale, offset, None, show, supports, True, annotations)
         size = self._resolve_figsize(figsize)
-        fig = super().show_structure(
-            verbosity=verbosity,
-            scale=scale,
-            offset=offset,
-            figsize=size,
-            show=False,
-            supports=supports,
-            values_only=False,
-            annotations=annotations,
-        )
+        fig = super().show_structure(verbosity=verbosity, scale=scale, offset=offset, figsize=size, show=False, supports=supports, values_only=False, annotations=annotations)
         ax = fig.axes[0]
-
         if self.length_unit:
             ax.set_xlabel(f"x [{self.length_unit}]")
             ax.set_ylabel(f"y [{self.length_unit}]")
-
         if verbosity == 0:
             self._collapse_uniform_q_labels(fig)
         self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
-    def show_bending_moment(
-        self,
-        factor: Optional[float] = None,
-        verbosity: int = 0,
-        scale: float = 1,
-        offset: Tuple[float, float] = (0, 0),
-        figsize: FigSize = None,
-        show: bool = True,
-        values_only: bool = False,
-        decimals: int = 2,
-    ):
+    def show_bending_moment(self, factor: Optional[float] = None, verbosity: int = 0, scale: float = 1, offset: Tuple[float, float] = (0, 0), figsize: FigSize = None, show: bool = True, values_only: bool = False, decimals: int = 2):
         if values_only:
-            return super().show_bending_moment(
-                factor=factor,
-                verbosity=verbosity,
-                scale=scale,
-                offset=offset,
-                figsize=None,
-                show=show,
-                values_only=True,
-            )
-
+            return super().show_bending_moment(factor=factor, verbosity=verbosity, scale=scale, offset=offset, figsize=None, show=show, values_only=True)
         size = self._resolve_figsize(figsize)
-        fig = super().show_bending_moment(
-            factor=factor,
-            verbosity=1,
-            scale=scale,
-            offset=offset,
-            figsize=size,
-            show=False,
-            values_only=False,
-        )
-
+        fig = super().show_bending_moment(factor=factor, verbosity=1, scale=scale, offset=offset, figsize=size, show=False, values_only=False)
         if verbosity == 0:
             x, y = super().show_bending_moment(factor=factor, values_only=True)
             self._annotate_relevant_values(fig, "M", x, y, decimals)
-
         title = "Diagrama de momento flector"
         if self.moment_unit:
             title += f" [{self.moment_unit}]"
@@ -425,43 +320,14 @@ class SystemElementsPlus(SystemElements):
         self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
-    def show_shear_force(
-        self,
-        factor: Optional[float] = None,
-        verbosity: int = 0,
-        scale: float = 1,
-        offset: Tuple[float, float] = (0, 0),
-        figsize: FigSize = None,
-        show: bool = True,
-        values_only: bool = False,
-        decimals: int = 2,
-    ):
+    def show_shear_force(self, factor: Optional[float] = None, verbosity: int = 0, scale: float = 1, offset: Tuple[float, float] = (0, 0), figsize: FigSize = None, show: bool = True, values_only: bool = False, decimals: int = 2):
         if values_only:
-            return super().show_shear_force(
-                factor=factor,
-                verbosity=verbosity,
-                scale=scale,
-                offset=offset,
-                figsize=None,
-                show=show,
-                values_only=True,
-            )
-
+            return super().show_shear_force(factor=factor, verbosity=verbosity, scale=scale, offset=offset, figsize=None, show=show, values_only=True)
         size = self._resolve_figsize(figsize)
-        fig = super().show_shear_force(
-            factor=factor,
-            verbosity=1,
-            scale=scale,
-            offset=offset,
-            figsize=size,
-            show=False,
-            values_only=False,
-        )
-
+        fig = super().show_shear_force(factor=factor, verbosity=1, scale=scale, offset=offset, figsize=size, show=False, values_only=False)
         if verbosity == 0:
             x, y = super().show_shear_force(factor=factor, values_only=True)
             self._annotate_relevant_values(fig, "Q", x, y, decimals)
-
         title = "Diagrama de esfuerzo cortante"
         if self.force_unit:
             title += f" [{self.force_unit}]"
@@ -469,43 +335,14 @@ class SystemElementsPlus(SystemElements):
         self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
-    def show_axial_force(
-        self,
-        factor: Optional[float] = None,
-        verbosity: int = 0,
-        scale: float = 1,
-        offset: Tuple[float, float] = (0, 0),
-        figsize: FigSize = None,
-        show: bool = True,
-        values_only: bool = False,
-        decimals: int = 2,
-    ):
+    def show_axial_force(self, factor: Optional[float] = None, verbosity: int = 0, scale: float = 1, offset: Tuple[float, float] = (0, 0), figsize: FigSize = None, show: bool = True, values_only: bool = False, decimals: int = 2):
         if values_only:
-            return super().show_axial_force(
-                factor=factor,
-                verbosity=verbosity,
-                scale=scale,
-                offset=offset,
-                figsize=None,
-                show=show,
-                values_only=True,
-            )
-
+            return super().show_axial_force(factor=factor, verbosity=verbosity, scale=scale, offset=offset, figsize=None, show=show, values_only=True)
         size = self._resolve_figsize(figsize)
-        fig = super().show_axial_force(
-            factor=factor,
-            verbosity=1,
-            scale=scale,
-            offset=offset,
-            figsize=size,
-            show=False,
-            values_only=False,
-        )
-
+        fig = super().show_axial_force(factor=factor, verbosity=1, scale=scale, offset=offset, figsize=size, show=False, values_only=False)
         if verbosity == 0:
             x, y = super().show_axial_force(factor=factor, values_only=True)
             self._annotate_relevant_values(fig, "N", x, y, decimals)
-
         title = "Diagrama de fuerza axial"
         if self.force_unit:
             title += f" [{self.force_unit}]"
@@ -513,65 +350,20 @@ class SystemElementsPlus(SystemElements):
         self._tighten_axes(fig, tighten_y=True)
         return self._finish(fig, show)
 
-    def show_reaction_force(
-        self,
-        verbosity: int = 0,
-        scale: float = 1,
-        offset: Tuple[float, float] = (0, 0),
-        figsize: FigSize = None,
-        show: bool = True,
-        decimals: int = 2,
-    ):
+    def show_reaction_force(self, verbosity: int = 0, scale: float = 1, offset: Tuple[float, float] = (0, 0), figsize: FigSize = None, show: bool = True, decimals: int = 2):
         size = self._resolve_figsize(figsize)
-        fig = super().show_reaction_force(
-            verbosity=1,
-            scale=scale,
-            offset=offset,
-            figsize=size,
-            show=False,
-        )
-
+        fig = super().show_reaction_force(verbosity=1, scale=scale, offset=offset, figsize=size, show=False)
         fig.axes[0].set_title("Diagrama de reacciones")
         if verbosity == 0:
             self._annotate_reactions(fig, decimals)
         self._tighten_axes(fig, tighten_y=False)
         return self._finish(fig, show)
 
-    def show_displacement(
-        self,
-        factor: Optional[float] = None,
-        verbosity: int = 0,
-        scale: float = 1,
-        offset: Tuple[float, float] = (0, 0),
-        figsize: FigSize = None,
-        show: bool = True,
-        linear: bool = False,
-        values_only: bool = False,
-    ):
+    def show_displacement(self, factor: Optional[float] = None, verbosity: int = 0, scale: float = 1, offset: Tuple[float, float] = (0, 0), figsize: FigSize = None, show: bool = True, linear: bool = False, values_only: bool = False):
         if values_only:
-            return super().show_displacement(
-                factor=factor,
-                verbosity=verbosity,
-                scale=scale,
-                offset=offset,
-                figsize=None,
-                show=show,
-                linear=linear,
-                values_only=True,
-            )
-
+            return super().show_displacement(factor=factor, verbosity=verbosity, scale=scale, offset=offset, figsize=None, show=show, linear=linear, values_only=True)
         size = self._resolve_figsize(figsize)
-        fig = super().show_displacement(
-            factor=factor,
-            verbosity=verbosity,
-            scale=scale,
-            offset=offset,
-            figsize=size,
-            show=False,
-            linear=linear,
-            values_only=False,
-        )
-
+        fig = super().show_displacement(factor=factor, verbosity=verbosity, scale=scale, offset=offset, figsize=size, show=False, linear=linear, values_only=False)
         fig.axes[0].set_title("Forma deformada (escala amplificada)")
         if verbosity == 0:
             self._label_displacement_values(fig)
