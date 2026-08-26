@@ -104,3 +104,31 @@ def test_reactions_do_not_claim_a_false_transverse_physical_scale():
         assert len(ax.get_yticks()) == 0
         '''
     )
+
+
+def test_reaction_plot_reserves_same_left_gutter_as_physical_result_plots():
+    run_isolated(
+        '''
+        reaction = ss.show_reaction_force(show=False)
+        shear = ss.show_shear_force(show=False)
+
+        ax_r = reaction.axes[0]
+        ax_s = shear.axes[0]
+
+        # The actual axes boxes should use the same normalized layout.
+        assert np.allclose(ax_r.get_position().bounds, ax_s.get_position().bounds, atol=1e-12)
+
+        # Colab/Jupyter renders Matplotlib figures with a tight bounding box.
+        # Reserve an equivalent left gutter even though reactions intentionally
+        # have no numeric Y scale, so the second graph aligns with V/M/u_y.
+        reaction.canvas.draw()
+        shear.canvas.draw()
+        rr = reaction.canvas.get_renderer()
+        rs = shear.canvas.get_renderer()
+        tight_r = reaction.get_tightbbox(rr).transformed(reaction.dpi_scale_trans)
+        tight_s = shear.get_tightbbox(rs).transformed(shear.dpi_scale_trans)
+        gutter_r = ax_r.get_window_extent(rr).x0 - tight_r.x0
+        gutter_s = ax_s.get_window_extent(rs).x0 - tight_s.x0
+        assert abs(gutter_r - gutter_s) <= 8.0
+        '''
+    )
