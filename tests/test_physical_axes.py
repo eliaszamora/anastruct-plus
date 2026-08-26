@@ -7,6 +7,7 @@ BASE = r'''
 import matplotlib
 matplotlib.use("Agg")
 import numpy as np
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from anastruct_plus import SystemElements
 
 ss = SystemElements(force_unit="tonf", length_unit="m")
@@ -121,6 +122,8 @@ def test_reaction_plot_reserves_same_left_gutter_as_physical_result_plots():
         # Colab/Jupyter renders Matplotlib figures with a tight bounding box.
         # Reserve an equivalent left gutter even though reactions intentionally
         # have no numeric Y scale, so the second graph aligns with V/M/u_y.
+        FigureCanvasAgg(reaction)
+        FigureCanvasAgg(shear)
         reaction.canvas.draw()
         shear.canvas.draw()
         rr = reaction.canvas.get_renderer()
