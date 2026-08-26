@@ -7,10 +7,10 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 - tamaño de figura automático según la geometría;
 - encuadre más compacto alrededor de la estructura y los diagramas;
 - unidades visuales de longitud, fuerza, carga distribuida, momento y desplazamiento;
-- una sola etiqueta centrada para cargas distribuidas uniformes;
+- una sola etiqueta centrada para cargas distribuidas uniformes, separada de los identificadores del modelo;
 - etiquetas automáticas en los extremos y máximos/mínimos relevantes de momento, corte y axial;
-- reacciones con componentes identificadas por nodo (`R1x`, `R1y`, `M1`, etc.);
-- forma deformada rotulada explícitamente como escala amplificada y magnitud real identificada como `u_max = ...`;
+- reacciones con componentes identificadas por nodo (`R1x`, `R1y`, `M1`, etc.) y apilado de etiquetas para evitar solapamientos;
+- forma deformada rotulada explícitamente como escala amplificada y magnitud real `u_max = ...` desplazada fuera de la curva;
 - conserva la API habitual de `anaStruct`, incluyendo `values_only=True`.
 
 > `anaStruct Plus` no convierte unidades. `anaStruct` sigue trabajando con números sin unidades; debes mantener un sistema coherente. Las unidades indicadas aquí son etiquetas de presentación.
@@ -164,7 +164,7 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.1`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
+Versión `0.2.2`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
 
 ### Nota sobre la forma deformada
 

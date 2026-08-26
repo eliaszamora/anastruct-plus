@@ -148,11 +148,30 @@ class SystemElementsPlus(SystemElements):
                 first.set_position(((x1 + x2) / 2, (y1 + y2) / 2))
                 second.remove()
 
-        if self.distributed_load_unit:
-            for text in ax.texts:
-                label = text.get_text().strip()
-                if label.startswith("q=") and self.distributed_load_unit not in label:
-                    text.set_text(f"{label} {self.distributed_load_unit}")
+        # Move q-load labels a few points above anaStruct's native position so
+        # they do not collide with element/node identifiers. Re-create them as
+        # annotations so the separation is screen-space based and independent
+        # of the model dimensions.
+        for text in list(ax.texts):
+            label = text.get_text().strip()
+            if not label.startswith("q="):
+                continue
+            if self.distributed_load_unit and self.distributed_load_unit not in label:
+                label = f"{label} {self.distributed_load_unit}"
+            x, y = text.get_position()
+            color = text.get_color()
+            fontsize = text.get_fontsize()
+            text.remove()
+            ax.annotate(
+                label,
+                xy=(x, y),
+                xytext=(0, 8),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                color=color,
+                fontsize=fontsize,
+            )
 
     def _annotate_relevant_values(
         self,
@@ -224,6 +243,11 @@ class SystemElementsPlus(SystemElements):
         force_suffix = f" {self.force_unit}" if self.force_unit else ""
         moment_suffix = f" {self.moment_unit}" if self.moment_unit else ""
 
+        node_xs = [node.vertex.x for node in getattr(self, "node_map", {}).values()]
+        x_min = min(node_xs) if node_xs else 0.0
+        x_max = max(node_xs) if node_xs else 0.0
+        x_span = max(x_max - x_min, 1.0)
+
         for node in getattr(self, "reaction_forces", {}).values():
             node_id = getattr(node, "id", "")
             x = node.vertex.x
@@ -246,26 +270,36 @@ class SystemElementsPlus(SystemElements):
                     fontsize=9,
                 )
 
+            # Keep labels inside the plot at exterior supports.
+            at_right_edge = abs(x - x_max) <= 1e-9 + 1e-6 * x_span
+            inward_dx = -5 if at_right_edge else 5
+            inward_ha = "right" if at_right_edge else "left"
+
+            fy_on_top = False
             if not np.isclose(Fy_display, 0.0, rtol=1e-5, atol=1e-9):
                 dy = 12 if Fy_display >= 0 else -15
                 va = "bottom" if Fy_display >= 0 else "top"
+                fy_on_top = Fy_display >= 0
                 ax.annotate(
                     f"R{node_id}y = {self._format_value(Fy_display, decimals)}{force_suffix}",
                     xy=(x, y),
-                    xytext=(4, dy),
+                    xytext=(inward_dx, dy),
                     textcoords="offset points",
-                    ha="left",
+                    ha=inward_ha,
                     va=va,
                     fontsize=9,
                 )
 
             if not np.isclose(moment, 0.0, rtol=1e-5, atol=1e-9):
+                # If an upward vertical reaction is already above this node,
+                # stack the moment label higher instead of letting both labels overlap.
+                moment_dy = 32 if fy_on_top else 18
                 ax.annotate(
                     f"M{node_id} = {self._format_value(moment, decimals)}{moment_suffix}",
                     xy=(x, y),
-                    xytext=(8, 18),
+                    xytext=(inward_dx, moment_dy),
                     textcoords="offset points",
-                    ha="left",
+                    ha=inward_ha,
                     va="bottom",
                     fontsize=9,
                 )
@@ -275,14 +309,39 @@ class SystemElementsPlus(SystemElements):
         if not fig.axes:
             return
 
+        ax = fig.axes[0]
         suffix = f" {self.displacement_unit}" if self.displacement_unit else ""
-        for text in fig.axes[0].texts:
+        node_ys = [node.vertex.y for node in getattr(self, "node_map", {}).values()]
+        reference_y = float(np.mean(node_ys)) if node_ys else 0.0
+
+        for text in list(ax.texts):
             raw = text.get_text().strip()
             try:
                 float(raw)
             except (TypeError, ValueError):
                 continue
-            text.set_text(f"u_max = {raw}{suffix}")
+
+            x, y = text.get_position()
+            color = text.get_color()
+            fontsize = text.get_fontsize()
+            text.remove()
+
+            # Put the value on the free side of the deformed curve instead of
+            # directly on top of it. The offset is in points, so it remains
+            # legible regardless of the deformation amplification factor.
+            above_curve = y <= reference_y
+            dy = 22 if above_curve else -22
+            va = "bottom" if above_curve else "top"
+            ax.annotate(
+                f"u_max = {raw}{suffix}",
+                xy=(x, y),
+                xytext=(0, dy),
+                textcoords="offset points",
+                ha="center",
+                va=va,
+                color=color,
+                fontsize=fontsize,
+            )
 
     def show_structure(
         self,
