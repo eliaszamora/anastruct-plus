@@ -14,6 +14,7 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 - reacciones identificadas por nodo (`R1x`, `R1y`, `M1`, etc.);
 - anotación `u_max = ...` próxima a la deformada y conectada mediante flecha;
 - ejes físicos calibrados para vigas rectas horizontales;
+- alineación visual común entre reacciones, cortante, momento y deformada, incluso cuando reacciones no tiene eje Y físico;
 - conserva la API habitual de `anaStruct`, incluido `values_only=True`.
 
 > `anaStruct Plus` no convierte unidades. `anaStruct` sigue trabajando con números sin unidades; debes mantener un sistema coherente. `force_unit` y `length_unit` definen las unidades de presentación.
@@ -83,7 +84,7 @@ Los diagramas muestran automáticamente:
 - unidad física junto a cada valor;
 - sin duplicar etiquetas cuando un extremo coincide con un máximo o mínimo.
 
-Para una **viga recta horizontal**, v0.2.6 reconstruye además la escala transversal física a partir de los resultados y del factor gráfico utilizado por anaStruct:
+Para una **viga recta horizontal**, anaStruct Plus reconstruye además la escala transversal física a partir de los resultados y del factor gráfico utilizado por anaStruct:
 
 ```text
 Cortante  → V [tonf]
@@ -115,6 +116,8 @@ M1  = ... tonf·m
 ```
 
 La convención visual de `R1y` respeta el sentido mostrado en el gráfico cuando `invert_y_loads=True`. El solver y sus resultados internos no se modifican.
+
+Desde la versión `0.2.7`, el gráfico de reacciones reserva el mismo espacio lateral y utiliza la misma caja de ejes que los diagramas de `V`, `M` y `u_y`. Esto mantiene las figuras alineadas en Colab/Jupyter aun cuando el gráfico de reacciones no muestra una escala Y numérica. El espacio adicional es únicamente de layout: **no representa una magnitud física ni añade un eje Y ficticio**.
 
 ## Desplazamientos
 
@@ -189,4 +192,4 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.6`. anaStruct realiza el análisis estructural; anaStruct Plus modifica únicamente la presentación y el postproceso gráfico.
+Versión `0.2.7`. anaStruct realiza el análisis estructural; anaStruct Plus modifica únicamente la presentación y el postproceso gráfico.
