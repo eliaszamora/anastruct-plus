@@ -167,9 +167,11 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
         return np.unique(np.round(ticks, 12))
 
     @staticmethod
-    def _format_tick(value: float) -> str:
+    def _format_tick(value: float, decimals: Optional[int] = None) -> str:
         if abs(value) < 5e-13:
             value = 0.0
+        if decimals is not None:
+            return f"{value:.{decimals}f}"
         return f"{value:.6g}"
 
     def _apply_physical_axis(
@@ -179,6 +181,7 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
         factor: float,
         physical_values: np.ndarray,
         ylabel: str,
+        tick_decimals: Optional[int] = None,
     ) -> None:
         if not fig.axes:
             return
@@ -194,7 +197,9 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
 
         ax = fig.axes[0]
         ax.set_yticks(positions)
-        ax.set_yticklabels([self._format_tick(value) for value in ticks])
+        ax.set_yticklabels(
+            [self._format_tick(value, tick_decimals) for value in ticks]
+        )
         ax.set_ylabel(ylabel)
         ax.yaxis.grid(True, alpha=0.28)
         if "left" in ax.spines:
@@ -203,7 +208,7 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
         ymin = float(np.min(positions))
         ymax = float(np.max(positions))
         span = max(ymax - ymin, abs(factor) * max(float(np.ptp(ticks)), 1e-9), 1e-9)
-        pad = 0.18 * span
+        pad = 0.25 * span
         ax.set_ylim(ymin - pad, ymax + pad)
         fig.subplots_adjust(left=0.12, right=0.97, bottom=0.18, top=0.86)
         ax._anastruct_plus_physical_y = {
@@ -226,7 +231,14 @@ class SystemElementsPlus(_ResultSystemElementsPlus):
         unit = self._result_unit(result_key)
         symbol = self._RESULT_AXIS_LABEL[result_key]
         ylabel = f"{symbol} [{unit}]" if unit else symbol
-        self._apply_physical_axis(fig, baseline, factor, values, ylabel)
+        self._apply_physical_axis(
+            fig,
+            baseline,
+            factor,
+            values,
+            ylabel,
+            tick_decimals=2,
+        )
 
     # ------------------------------------------------------------------
     # Physical displacement axis
