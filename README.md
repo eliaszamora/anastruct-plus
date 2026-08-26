@@ -10,7 +10,8 @@ Extensión ligera de [`anaStruct`](https://github.com/anastruct/anaStruct) para 
 - una sola etiqueta centrada para cargas distribuidas uniformes, separada de los identificadores del modelo;
 - etiquetas automáticas en los extremos y máximos/mínimos relevantes de momento, corte y axial;
 - reacciones con componentes identificadas por nodo (`R1x`, `R1y`, `M1`, etc.) y apilado de etiquetas para evitar solapamientos;
-- forma deformada rotulada explícitamente como escala amplificada y magnitud real `u_max = ...` desplazada fuera de la curva;
+- forma deformada rotulada explícitamente como escala amplificada y magnitud real `u_max = ...` en un recuadro independiente de la curva;
+- semántica de ejes segura: no se muestran escalas numéricas que anaStruct usa solo como amplificación gráfica;
 - conserva la API habitual de `anaStruct`, incluyendo `values_only=True`.
 
 > `anaStruct Plus` no convierte unidades. `anaStruct` sigue trabajando con números sin unidades; debes mantener un sistema coherente. Las unidades indicadas aquí son etiquetas de presentación.
@@ -80,6 +81,18 @@ ss.show_bending_moment()
 ss.show_shear_force()
 ss.show_axial_force()
 ```
+
+## Semántica de los ejes
+
+`anaStruct` escala transversalmente los diagramas de momento, corte, axial, reacciones y deformada para hacerlos visibles. Esa amplitud dibujada **no es la magnitud física** del resultado. `anaStruct Plus` evita mostrar ticks numéricos que puedan sugerir lo contrario:
+
+- en una viga horizontal se conserva únicamente `x [unidad]`, porque `x` sí representa la posición longitudinal real;
+- en un elemento/modelo vertical se conserva únicamente `y [unidad]`;
+- en marcos con elementos en distintas direcciones se ocultan ambos ejes numéricos en los diagramas de resultados, porque no existe un único eje longitudinal;
+- las magnitudes físicas se leen en las etiquetas del propio diagrama y en sus unidades (`tonf`, `tonf·m`, etc.);
+- `show_structure()` conserva ambos ejes geométricos `x` e `y`, ya que allí sí representan coordenadas reales del modelo.
+
+Esto evita casos visualmente incorrectos como un máximo `M = 20 tonf·m` dibujado a una ordenada gráfica `0.6` que podría confundirse con una escala física.
 
 ## Reacciones
 
@@ -164,8 +177,9 @@ from anastruct_plus import SystemElementsPlus
 
 ## Estado
 
-Versión `0.2.2`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
+Versión `0.2.3`. El objetivo es mantener la extensión pequeña: `anaStruct` realiza el análisis y `anaStruct Plus` mejora únicamente la presentación y el postproceso gráfico.
+
 
 ### Nota sobre la forma deformada
 
-La curva deformada se representa con una escala gráfica amplificada para hacer visible la deformación. Por eso el eje vertical del dibujo no debe interpretarse como el desplazamiento real. La magnitud real se muestra mediante la etiqueta `u_max = ...` con la unidad de longitud configurada.
+La curva deformada se representa con una escala gráfica amplificada para hacer visible la deformación. Por eso la dirección transversal no presenta una escala numérica de desplazamiento. La magnitud real se muestra mediante la etiqueta `u_max = ...` con la unidad de longitud configurada.
